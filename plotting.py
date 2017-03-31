@@ -7,10 +7,15 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import os
+
+mingw_path = 'C:\\Program Files\\mingw-w64\\x86_64-6.3.0-posix-seh-rt_v5-rev1\\mingw64\\bin'
+
+os.environ['PATH'] = mingw_path + ';' + os.environ['PATH']
 terrain = sns.color_palette(palette='terrain',n_colors=10)
 plasma = sns.color_palette(palette='plasma',n_colors=10)
 rainbow = sns.color_palette(palette='rainbow',n_colors=6)
-
+import xgboost as xgb
 from RentHop import RentHop
 from bokeh.models import GeoJSONDataSource
 from bokeh.plotting import figure, show,output_file
@@ -164,8 +169,8 @@ def mapaTest(df):
     )
     circleLow = Circle(x="lon", y="lat", size=2, fill_color="red", fill_alpha=0.8, line_color=None)
 
-    #plot.add_glyph(sourceHigh, circleHigh)
-    #plot.add_glyph(sourceMedium, circleMedium)
+    plot.add_glyph(sourceHigh, circleHigh)
+    plot.add_glyph(sourceMedium, circleMedium)
     plot.add_glyph(sourceLow, circleLow)
 
     plot.add_tools(PanTool(), WheelZoomTool(), BoxSelectTool())
@@ -195,17 +200,22 @@ def correlation(df):
 
 def featureImportance(df):
     from sklearn.ensemble import RandomForestClassifier
+    from xgboost import XGBClassifier
     rhop = RentHop()
     train_X, train_Y, test_X = rhop.getData(train_df,test_df)
-    rf = RandomForestClassifier(n_estimators=500)
+    #train_X = pd.DataFrame(train_X).dropna()
+    # print(np.where(np.isnan(train_X.as_matrix())))
+    # exit()
+    rf = XGBClassifier(n_estimators=500)
     rf.fit(train_X,train_Y)
-    pd.Series(index = rhop.features_to_use,data = rf.feature_importances_).sort_values().plot(kind='bar')
+    pd.Series(index = rhop.features_to_use,data = rf.feature_importances_).sort_values()[-20:].plot(kind='bar')
     plt.show()
 
 
 
 featureImportance(train_df)
 #mapaTest(train_df)
+
 # pd.set_option('display.float_format', lambda x: '%.3f' % x)
 # print(train_df[train_df['interest_level']=='high'].price.describe())
 # print(train_df[train_df['interest_level']=='medium'].price.describe())

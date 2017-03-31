@@ -64,25 +64,26 @@ test_df = pd.read_json("input/test.json")
 
 rHop = RentHop()
 
-train_X, train_Y,test_X = rHop.getData(train_df,test_df)
-
-target_num_map = {'high':0, 'medium':1, 'low':2}
-
-param = {'max_depth':6, 'eta':0.08, 'gamma':1, 'silent':1, 'objective':'multi:softprob' ,'num_class':3,'eval_metric':'mlogloss','subsample':0.7,\
-         'colsample_bytree':'0.5','min_child_weight':1,'nthread':16}
+train_X, train_Y,test_X = rHop.getData(train_df,test_df,{"type":"None","value":100})
 
 xgTrain = xgb.DMatrix(train_X,label=train_Y)
 
+predictions = []
+for i in range(8):
+    seed = 7931 + 31*i
 
-bst = xgb.cv(param,xgTrain,2000,5,early_stopping_rounds=50,verbose_eval=25)
-print(bst)
-best_rounds = np.argmin(bst['test-mlogloss-mean'])
+    param = {'max_depth': 6, 'eta': 0.08, 'gamma': 1, 'silent': 1, 'objective': 'multi:softprob', 'num_class': 3,
+             'eval_metric': 'mlogloss', 'subsample': 0.7, \
+             'colsample_bytree': '0.5', 'min_child_weight': 1, 'nthread': 16}
+    param['seed'] = seed
+    bst = xgb.cv(param, xgTrain, 2000, 5, early_stopping_rounds=50, verbose_eval=50)
 
-model = xgb.train(param,xgTrain,best_rounds)
-pred = model.predict(xgb.DMatrix(test_X))
+    best_rounds = np.argmin(bst['test-mlogloss-mean'])
+
+    model = xgb.train(param, xgTrain, best_rounds)
+    predictions.append(model.predict(xgb.DMatrix(test_X)))
 
 
-res = pd.DataFrame(pred,columns = ['high','medium','low'],index=test_df.listing_id)
+res = pd.DataFrame(np.mean(predictions,axis=0),columns = ['low','medium','high'],index=test_df.listing_id)
 res.to_csv("files/xgb.csv")
-
 
